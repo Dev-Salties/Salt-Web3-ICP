@@ -1,0 +1,57 @@
+name: Deploy to Internet Computer
+
+# Manual trigger only — prevents accidental deploys from any push to main.
+# To deploy: GitHub → Actions → "Deploy to Internet Computer" → Run workflow → type DEPLOY
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to confirm deploying to production'
+        required: true
+
+jobs:
+  deploy:
+    # OPTION A (current): GitHub-hosted Linux runner — DFX installs fresh each run,
+    #   identity PEM must be stored in GitHub Secrets.
+    # OPTION B (when datacenter server is ready): change to `runs-on: self-hosted`
+    #   Then remove the "Install DFX" and "Import deployer identity" steps below —
+    #   DFX and the identity are already configured on the server permanently.
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'DEPLOY' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check & lint (final gate before deploy)
+        run: npx tsc --noEmit && npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_EMAILJS_SERVICE_ID: ${{ secrets.VITE_EMAILJS_SERVICE_ID }}
+          VITE_EMAILJS_PUBLIC_KEY: ${{ secrets.VITE_EMAILJS_PUBLIC_KEY }}
+          VITE_EMAILJS_CONTACT_TEMPLATE_ID: ${{ secrets.VITE_EMAILJS_CONTACT_TEMPLATE_ID }}
+          VITE_EMAILJS_SEED_TEMPLATE_ID: ${{ secrets.VITE_EMAILJS_SEED_TEMPLATE_ID }}
+          VITE_ZOLT_URL: ${{ secrets.VITE_ZOLT_URL }}
+
+      # OPTION A only — remove these two steps when switching to self-hosted runner
+      - name: Install DFX
+        run: sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
+      - name: Import deployer identity
+        run: |
+          echo "${{ secrets.DFX_IDENTITY_PEM }}" > /tmp/deployer.pem
+          dfx identity import salt-deployer /tmp/deployer.pem --force
+          dfx identity use salt-deployer
+
+      - name: Deploy to ICP mainnet
+        run: dfx deploy salt_frontend --network ic --no-wallet

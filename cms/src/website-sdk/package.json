@@ -1,0 +1,25 @@
+{
+  "name": "salt-essential-cms-workspace",
+  "private": true,
+  "scripts": {
+    "dev":            "pnpm --filter frontend dev",
+    "build":          "pnpm --filter frontend build",
+    "preview":        "pnpm --filter frontend preview",
+
+    "icp:local":      "icp network start -d",
+    "icp:deploy":     "icp deploy",
+    "icp:deploy:be":  "icp deploy backend",
+    "icp:deploy:ic":  "icp deploy --network ic",
+    "icp:id:backend": "icp canister id backend",
+
+    "generate":       "dfx generate backend"
+  },
+  "workspaces": [
+    "src/frontend",
+    "src/website-sdk"
+  ],
+  "devDependencies": {
+    "@dfinity/icp": "latest",
+    "typescript": "^5.4.5"
+  }
+}

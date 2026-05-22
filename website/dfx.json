@@ -1,0 +1,14 @@
+{
+  "canisters": {
+    "salt_frontend": {
+      "type": "assets" ,
+      "source": ["dist/"]
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "version": 1
+}

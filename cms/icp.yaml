@@ -1,0 +1,40 @@
+# ICP project config — Windows-compatible deployment via `npx icp`.
+# DFX users (Linux/WSL/Mac) use dfx.json instead.
+#
+# Commands:
+#   npx icp network start -d      → start local replica in background
+#   npx icp deploy                → deploy all canisters
+#   npx icp deploy backend        → deploy backend only
+#   npx icp deploy --network ic   → deploy to IC mainnet
+
+canisters:
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/backend/main.mo
+
+  - name: uploads
+    recipe:
+      type: "@dfinity/assets@v4.1.0"
+      configuration:
+        source: src/uploads/assets
+
+  - name: frontend
+    recipe:
+      type: "@dfinity/assets@v4.1.0"
+      configuration:
+        source: src/frontend/dist
+
+networks:
+  - name: local
+    mode: managed
+
+environments:
+  - name: local
+    network: local
+    canisters: [backend, uploads, frontend]
+
+  - name: ic
+    network: ic
+    canisters: [backend, uploads, frontend]

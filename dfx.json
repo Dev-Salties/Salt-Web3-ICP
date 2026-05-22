@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "canisters": {
+    "salt_frontend": {
+      "type": "assets",
+      "source": ["website/dist"]
+    },
+    "backend": {
+      "type": "motoko",
+      "main": "cms/src/backend/main.mo"
+    },
+    "frontend": {
+      "type": "assets",
+      "source": ["cms/src/frontend/dist"],
+      "dependencies": ["backend"],
+      "frontend": { "entrypoint": "cms/src/frontend/dist/index.html" }
+    },
+    "uploads": {
+      "type": "assets",
+      "source": ["cms/src/uploads/assets"]
+    }
+  },
+  "defaults": {
+    "build": { "packtool": "mops sources" }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    },
+    "ic": {
+      "providers": ["https://icp0.io"],
+      "type": "persistent"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+.dfx/
+dist/
+src/frontend/dist/
+src/declarations/
+*.env.local
+.env
