@@ -64,6 +64,10 @@ type SaltCms =
    getPublishedArticles: () -> (vec ArticleIndex) query;
    getTeamMembers: () -> (vec TeamMember) query;
    health: () -> (text) query;
+   /// True if caller is an admin (principal allowlist role check)
+   is_admin: () -> (bool) query;
+   /// True if caller is editor/admin (your Access.mo treats any stored user as editor-capable)
+   is_editor: () -> (bool) query;
    listUsers: () -> (vec UserRecord) query;
    publishArticle: (text) -> (CmsResult);
    removeUser: (principal) -> (CmsResult);
@@ -77,6 +81,8 @@ type SaltCms =
    updateVacancy: (Vacancy) -> (CmsResult);
    /// Upsert by (year, week) key — re-submitting the same pair updates the URL.
    upsertCatSession: (CatSession) -> (CmsResult);
+   /// Returns caller principal as text (useful for debugging + UI display)
+   whoami: () -> (text) query;
  };
 type Role = 
  variant {

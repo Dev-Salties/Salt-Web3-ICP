@@ -142,6 +142,8 @@ export const idlFactory = ({ IDL }) => {
     'getPublishedArticles' : IDL.Func([], [IDL.Vec(ArticleIndex)], ['query']),
     'getTeamMembers' : IDL.Func([], [IDL.Vec(TeamMember)], ['query']),
     'health' : IDL.Func([], [IDL.Text], ['query']),
+    'is_admin' : IDL.Func([], [IDL.Bool], ['query']),
+    'is_editor' : IDL.Func([], [IDL.Bool], ['query']),
     'listUsers' : IDL.Func([], [IDL.Vec(UserRecord)], ['query']),
     'publishArticle' : IDL.Func([IDL.Text], [CmsResult], []),
     'removeUser' : IDL.Func([IDL.Principal], [CmsResult], []),
@@ -154,6 +156,7 @@ export const idlFactory = ({ IDL }) => {
     'updateTeamMember' : IDL.Func([TeamMember], [CmsResult], []),
     'updateVacancy' : IDL.Func([Vacancy], [CmsResult], []),
     'upsertCatSession' : IDL.Func([CatSession], [CmsResult], []),
+    'whoami' : IDL.Func([], [IDL.Text], ['query']),
   });
   return SaltCms;
 };

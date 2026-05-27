@@ -6,14 +6,12 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { AuthClient } from '@dfinity/auth-client'
 import type { Identity } from '@dfinity/agent'
 
-const DFX_NETWORK = (import.meta.env.VITE_DFX_NETWORK as string) ?? 'local'
+const DFX_NETWORK = (import.meta.env.VITE_DFX_NETWORK as string) ?? "local";
 
-// Prefer env override; fallback to mainnet II (works even during local dev)
+// Prefer override; fallback to mainnet II always (works during local dev)
 const II_URL =
   (import.meta.env.VITE_II_URL as string) ??
-  (DFX_NETWORK === 'local'
-    ? 'https://identity.ic0.app'
-    : 'https://identity.ic0.app')
+  "https://identity.ic0.app";
 
 type AuthState = {
   identity:   Identity | null
@@ -47,15 +45,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async () => {
-    if (!client) return
-    await new Promise<void>((res, rej) =>
+    if (!client) return;
+
+    await new Promise<void>((resolve, reject) =>
       client.login({
         identityProvider: II_URL,
-        onSuccess: () => { setIdentity(client.getIdentity()); res() },
-        onError:   (e) => rej(e ?? new Error('II login failed')),
-      }),
-    )
-  }
+  
+        // Keep this (good)
+        maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1_000_000_000), // 7 days
+
+        onSuccess: () => {
+          setIdentity(client.getIdentity());
+          resolve();
+        },
+
+        onError: (err) => {
+          reject(err ?? new Error("II login failed"));
+        },
+      })
+    );
+  };
 
   const logout = async () => {
     await client?.logout()

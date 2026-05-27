@@ -98,6 +98,8 @@ export interface SaltCms {
   'getPublishedArticles' : ActorMethod<[], Array<ArticleIndex>>,
   'getTeamMembers' : ActorMethod<[], Array<TeamMember>>,
   'health' : ActorMethod<[], string>,
+  'is_admin' : ActorMethod<[], boolean>,
+  'is_editor' : ActorMethod<[], boolean>,
   'listUsers' : ActorMethod<[], Array<UserRecord>>,
   'publishArticle' : ActorMethod<[string], CmsResult>,
   'removeUser' : ActorMethod<[Principal], CmsResult>,
@@ -110,6 +112,7 @@ export interface SaltCms {
   'updateTeamMember' : ActorMethod<[TeamMember], CmsResult>,
   'updateVacancy' : ActorMethod<[Vacancy], CmsResult>,
   'upsertCatSession' : ActorMethod<[CatSession], CmsResult>,
+  'whoami' : ActorMethod<[], string>,
 }
 export interface TeamMember {
   'id' : string,

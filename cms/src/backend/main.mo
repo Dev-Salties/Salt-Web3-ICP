@@ -1,5 +1,6 @@
 /// Salt Essential CMS — main actor.
 /// Composes all domain modules into a single deployable canister.
+import Principal "mo:base/Principal";
 import Time "mo:base/Time";
 import Nat  "mo:base/Nat";
 import T    "./types/Types";
@@ -71,14 +72,32 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func addUser(p : Principal, role : T.Role) : async T.CmsResult {
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     access.addUser(msg.caller, p, role)
   };
 
   public shared (msg) func removeUser(p : Principal) : async T.CmsResult {
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     access.removeUser(msg.caller, p)
   };
 
-  public query func listUsers() : async [T.UserRecord] {
+  /// Returns caller principal as text (useful for debugging + UI display)
+  public query (msg) func whoami() : async Text {
+    Principal.toText(msg.caller)
+  };
+
+  /// True if caller is an admin (principal allowlist role check)
+  public query (msg) func is_admin() : async Bool {
+    access.isAdmin(msg.caller)
+  };
+
+  /// True if caller is editor/admin (your Access.mo treats any stored user as editor-capable)
+  public query (msg) func is_editor() : async Bool {
+    access.isEditor(msg.caller)
+  };
+
+  public query (msg) func listUsers() : async [T.UserRecord] {
+    if (not access.isAdmin(msg.caller)) return [];
     access.listUsers()
   };
 
