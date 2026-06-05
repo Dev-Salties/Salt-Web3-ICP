@@ -1,14 +1,30 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Calendar, Tag } from 'lucide-react'
-import { newsArticles } from '../data/news'
+import { newsArticles as staticNewsArticles } from '../data/news'
 import { articleContent } from '../data/articleContent'
 import { Helmet } from 'react-helmet-async'
+import { fetchArticleBySlug, fetchPublishedArticles, type WebsiteArticle } from '../lib/articles'
+
+type StaticArticle = {
+  slug: string
+  title: string
+  description: string
+  image: string
+  tags: string[]
+  date: string
+}
 
 function formatDate(iso: string) {
+  if (!iso || !iso.includes('-')) return 'Unknown date'
+
   const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-NA', {
+  const dt = new Date(y, (m || 1) - 1, d || 1)
+
+  if (Number.isNaN(dt.getTime())) return 'Unknown date'
+
+  return dt.toLocaleDateString('en-NA', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -19,17 +35,97 @@ export default function NewsArticle() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
 
-  const article = newsArticles.find((a) => a.slug === slug)
-  const content = slug ? articleContent[slug] : undefined
+  const [dynamicArticle, setDynamicArticle] = useState<WebsiteArticle | null>(null)
+  const [dynamicRelated, setDynamicRelated] = useState<WebsiteArticle[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!article) navigate('/news', { replace: true })
-  }, [article, navigate])
+    let cancelled = false
+
+    async function load() {
+      if (!slug) return
+
+      try {
+        const [article, published] = await Promise.all([
+          fetchArticleBySlug(slug),
+          fetchPublishedArticles(),
+        ])
+
+        if (!cancelled) {
+          setDynamicArticle(article)
+          setDynamicRelated(
+            published
+              .filter((a) => a.slug !== slug)
+              .slice(0, 10) as WebsiteArticle[],
+          )
+        }
+      } catch (err) {
+        console.warn('[NewsArticle] Failed to fetch backend article, using fallback.', err)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
+  const staticArticle = useMemo(
+    () => staticNewsArticles.find((a) => a.slug === slug),
+    [slug],
+  )
+
+  const article = dynamicArticle
+    ? {
+        slug: dynamicArticle.slug,
+        title: dynamicArticle.title,
+        description: dynamicArticle.description,
+        image: dynamicArticle.image,
+        tags: dynamicArticle.tags,
+        date: dynamicArticle.date,
+      }
+    : staticArticle
+
+  const content =
+    dynamicArticle?.body && dynamicArticle.body.trim().length > 0
+      ? dynamicArticle.body
+      : slug
+        ? articleContent[slug]
+        : undefined
+
+  useEffect(() => {
+    if (!loading && !article) {
+      navigate('/news', { replace: true })
+    }
+  }, [loading, article, navigate])
+
+  if (loading) {
+    return (
+      <div className="bg-[#F8FAFC] px-4 py-16 text-center text-sm text-[#64748B]">
+        Loading article...
+      </div>
+    )
+  }
 
   if (!article) return null
 
-  // Pick 3 related articles (same tags, excluding current)
-  const related = newsArticles
+  const relatedPool: StaticArticle[] = dynamicArticle
+    ? dynamicRelated.map((a) => ({
+        slug: a.slug,
+        title: a.title,
+        description: a.description,
+        image: a.image,
+        tags: a.tags,
+        date: a.date,
+      }))
+    : staticNewsArticles
+
+  const related = relatedPool
     .filter(
       (a) =>
         a.slug !== slug &&
@@ -46,12 +142,16 @@ export default function NewsArticle() {
     >
       <Helmet>
         <title>{article.title} | Salt Essential IT</title>
-        <meta name="description" content={article.description} />
+        <meta
+          name="description"
+          content={dynamicArticle?.metaDesc || article.description}
+        />
       </Helmet>
+
       {/* Hero image */}
       <div className="relative h-[300px] w-full overflow-hidden bg-[#0F172A] sm:h-[380px] md:h-[440px]">
         <img
-          src={article.image}
+          src={dynamicArticle?.ogImage || article.image}
           alt={article.title}
           className="h-full w-full object-cover opacity-60"
           onError={(e) => {
@@ -82,10 +182,11 @@ export default function NewsArticle() {
               <Calendar className="h-3.5 w-3.5" />
               {formatDate(article.date)}
             </span>
+
             {article.tags.length > 0 && (
               <span className="flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5" />
-                {article.tags.slice(0, 3).join(' Â· ')}
+                {article.tags.slice(0, 3).join(' · ')}
               </span>
             )}
           </div>

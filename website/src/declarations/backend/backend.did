@@ -1,0 +1,174 @@
+type Vacancy = 
+ record {
+   active: bool;
+   applyUrl: text;
+   closingDate: text;
+   datePosted: int;
+   department: text;
+   description: text;
+   employmentType: EmploymentType;
+   id: text;
+   location: text;
+   summary: text;
+   title: text;
+   updatedAt: int;
+ };
+type UserRecord = 
+ record {
+   addedAt: int;
+   "principal": principal;
+   role: Role;
+ };
+type TeamMember = 
+ record {
+   bio: text;
+   createdAt: int;
+   id: text;
+   name: text;
+   order: nat;
+   photoUrl: text;
+   role: text;
+   updatedAt: int;
+ };
+type SaltCms = 
+ service {
+   addUser: (principal, Role) -> (CmsResult);
+   archiveCatSession: (text) -> (CmsResult);
+   /// First call ever — makes the caller the first admin. Fails once bootstrapped.
+   bootstrapAdmin: () -> (CmsResult);
+   createArticle: (Article) -> (CmsResult);
+   createCatSession: (CatSession) -> (CmsResult);
+   createCategory: (Category) -> (CmsResult);
+   createProduct: (Product) -> (CmsResult);
+   createTeamMember: (TeamMember) -> (CmsResult);
+   createVacancy: (Vacancy) -> (CmsResult);
+   deleteArticle: (text) -> (CmsResult);
+   deleteCatSession: (text) -> (CmsResult);
+   deleteCategory: (text) -> (CmsResult);
+   deleteProduct: (text) -> (CmsResult);
+   deleteTeamMember: (text) -> (CmsResult);
+   deleteVacancy: (text) -> (CmsResult);
+   getActiveVacancies: () -> (vec Vacancy) query;
+   getAllArticles: () -> (vec Article);
+   getAllCatSessions: () -> (vec CatSession);
+   getAllProducts: () -> (vec Product);
+   getAllVacancies: () -> (vec Vacancy);
+   getArticle: (text) -> (opt Article) query;
+   getArticleBySlug: (text) -> (opt Article) query;
+   getArticlesByTag: (text) -> (vec ArticleIndex) query;
+   getCategories: () -> (vec Category) query;
+   getCatsLinks: () -> (vec CatSession) query;
+   getCatsLinksByYear: (text) -> (vec CatSession) query;
+   getProducts: () -> (vec Product) query;
+   getProductsByCategory: (text) -> (vec Product) query;
+   getPublishedArticles: () -> (vec ArticleIndex) query;
+   getTeamMembers: () -> (vec TeamMember) query;
+   health: () -> (text) query;
+   /// True if caller is an admin (principal allowlist role check)
+   is_admin: () -> (bool) query;
+   /// True if caller is editor/admin (your Access.mo treats any stored user as editor-capable)
+   is_editor: () -> (bool) query;
+   listUsers: () -> (vec UserRecord) query;
+   publishArticle: (text) -> (CmsResult);
+   removeUser: (principal) -> (CmsResult);
+   unarchiveCatSession: (text) -> (CmsResult);
+   unpublishArticle: (text) -> (CmsResult);
+   updateArticle: (Article) -> (CmsResult);
+   updateCatSession: (CatSession) -> (CmsResult);
+   updateCategory: (Category) -> (CmsResult);
+   updateProduct: (Product) -> (CmsResult);
+   updateTeamMember: (TeamMember) -> (CmsResult);
+   updateVacancy: (Vacancy) -> (CmsResult);
+   /// Upsert by (year, week) key — re-submitting the same pair updates the URL.
+   upsertCatSession: (CatSession) -> (CmsResult);
+   /// Returns caller principal as text (useful for debugging + UI display)
+   whoami: () -> (text) query;
+ };
+type Role = 
+ variant {
+   admin;
+   editor;
+ };
+type Product = 
+ record {
+   active: bool;
+   category: text;
+   createdAt: int;
+   description: text;
+   enquiryUrl: text;
+   id: text;
+   imageUrl: text;
+   name: text;
+   price: text;
+   updatedAt: int;
+ };
+type EmploymentType = 
+ variant {
+   contract;
+   fullTime;
+   internship;
+   partTime;
+ };
+type CmsResult = 
+ variant {
+   err: text;
+   ok;
+ };
+type Category = 
+ record {
+   id: text;
+   name: text;
+   order: nat;
+ };
+type CatSession = 
+ record {
+   archived: bool;
+   date: text;
+   id: text;
+   imageUrl: text;
+   order: nat;
+   title: text;
+   topic: text;
+   week: nat;
+   weekLabel: text;
+   year: text;
+   youtubeUrl: text;
+ };
+type ArticleStatus = 
+ variant {
+   draft;
+   published;
+   scheduled;
+ };
+type ArticleIndex = 
+ record {
+   date: text;
+   description: text;
+   id: text;
+   imageUrl: text;
+   slug: text;
+   status: ArticleStatus;
+   tags: vec text;
+   title: text;
+ };
+type Article = 
+ record {
+   author: text;
+   body: text;
+   createdAt: int;
+   date: text;
+   description: text;
+   id: text;
+   imageUrl: text;
+   metaDesc: text;
+   ogImage: text;
+   scheduledAt: opt int;
+   slug: text;
+   status: ArticleStatus;
+   tags: vec text;
+   title: text;
+   updatedAt: int;
+ };
+/// Salt Essential CMS — main actor.
+/// Composes all domain modules into a single deployable canister.
+service : () -> SaltCms

@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "rm -rf src/declarations/backend && mkdir -p src/declarations && cp -R ../src/declarations/backend src/declarations/backend",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dfinity/agent": "^3.4.3",
+    "@dfinity/candid": "^3.4.3",
+    "@dfinity/principal": "^3.4.3",
     "@emailjs/browser": "^4.4.1",
     "@fontsource/roboto": "^5.2.6",
     "@hookform/resolvers": "^5.2.2",

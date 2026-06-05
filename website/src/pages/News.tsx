@@ -3,27 +3,70 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, Tag, Calendar } from 'lucide-react'
 import PageHero from '../components/PageHero'
-import { newsArticles } from '../data/news'
+import { newsArticles as staticNewsArticles } from '../data/news'
+import { fetchPublishedArticles, type WebsiteArticleIndex } from '../lib/articles'
 import { Helmet } from 'react-helmet-async'
 
+type UiArticle = WebsiteArticleIndex
+
+function safeText(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback
+}
+
+function safeTags(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((t): t is string => typeof t === 'string')
+    : []
+}
+
 function formatDate(iso: string) {
+  if (!iso || !iso.includes('-')) return 'Unknown date'
+
   const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-NA', {
+  const dt = new Date(y, (m || 1) - 1, d || 1)
+
+  if (Number.isNaN(dt.getTime())) return 'Unknown date'
+
+  return dt.toLocaleDateString('en-NA', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
 }
 
-// Collect all unique tags for filter chips
-const allTags = Array.from(
-  new Set(newsArticles.flatMap((a) => a.tags)),
-).sort()
+function normalizeStaticArticle(a: any): UiArticle | null {
+  const slug = safeText(a?.slug)
+  const title = safeText(a?.title)
 
-// Year buckets
-const allYears = Array.from(
-  new Set(newsArticles.map((a) => a.date.slice(0, 4))),
-).sort((a, b) => Number(b) - Number(a))
+  if (!slug || !title) return null
+
+  return {
+    slug,
+    title,
+    description: safeText(a?.description),
+    image: safeText(a?.image, '/Sections/Salt-blue-header-services.jpg'),
+    tags: safeTags(a?.tags),
+    date: safeText(a?.date),
+  }
+}
+
+function mergeArticles(dynamicArticles: UiArticle[], fallbackArticles: UiArticle[]) {
+  const bySlug = new Map<string, UiArticle>()
+
+  for (const article of dynamicArticles) {
+    if (article.slug) bySlug.set(article.slug, article)
+  }
+
+  for (const article of fallbackArticles) {
+    if (article.slug && !bySlug.has(article.slug)) {
+      bySlug.set(article.slug, article)
+    }
+  }
+
+  return Array.from(bySlug.values()).sort((a, b) =>
+    safeText(b.date).localeCompare(safeText(a.date)),
+  )
+}
 
 export default function News() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -32,26 +75,86 @@ export default function News() {
   const [activeYear, setActiveYear] = useState<string | null>(null)
   const [showAllTags, setShowAllTags] = useState(false)
 
-  // Clean up ?tag= from URL after reading it on mount
+  const normalizedStatic = useMemo(
+    () => staticNewsArticles.map(normalizeStaticArticle).filter(Boolean) as UiArticle[],
+    [],
+  )
+
+  const [articles, setArticles] = useState<UiArticle[]>(normalizedStatic)
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     if (searchParams.get('tag')) {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadArticles() {
+      setLoading(true)
+
+      try {
+        const published = await fetchPublishedArticles()
+        const merged = mergeArticles(published, normalizedStatic)
+
+        if (!cancelled) {
+          setArticles(merged)
+        }
+      } catch (err) {
+        console.warn('[News] Failed to load backend articles. Using static fallback only.', err)
+        if (!cancelled) {
+          setArticles(normalizedStatic)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadArticles()
+
+    return () => {
+      cancelled = true
+    }
+  }, [normalizedStatic])
+
+  const allTags = useMemo(() => {
+    return Array.from(new Set(articles.flatMap((a) => safeTags(a.tags)))).sort()
+  }, [articles])
+
+  const allYears = useMemo(() => {
+    return Array.from(
+      new Set(
+        articles
+          .map((a) => (typeof a.date === "string" ? a.date : String(a.date ?? "")))
+          .filter((d) => d.length >= 4)
+          .map((d) => d.slice(0, 4)),
+      ),
+    ).sort((a, b) => Number(b) - Number(a));
+  }, [articles]);
+
   const filtered = useMemo(() => {
-    return newsArticles.filter((a) => {
+    return articles.filter((a) => {
       const q = query.toLowerCase()
+      const title = safeText(a.title).toLowerCase()
+      const description = safeText(a.description).toLowerCase()
+      const tags = safeTags(a.tags)
+
       const matchesQuery =
         !q ||
-        a.title.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q) ||
-        a.tags.some((t) => t.toLowerCase().includes(q))
-      const matchesTag = !activeTag || a.tags.includes(activeTag)
-      const matchesYear = !activeYear || a.date.startsWith(activeYear)
+        title.includes(q) ||
+        description.includes(q) ||
+        tags.some((t) => t.toLowerCase().includes(q))
+
+      const matchesTag = !activeTag || tags.includes(activeTag)
+      const matchesYear = !activeYear || safeText(a.date).startsWith(activeYear)
+
       return matchesQuery && matchesTag && matchesYear
     })
-  }, [query, activeTag, activeYear])
+  }, [articles, query, activeTag, activeYear])
 
   const visibleTags = showAllTags ? allTags : allTags.slice(0, 12)
 
@@ -61,7 +164,7 @@ export default function News() {
     setActiveYear(null)
   }
 
-  const hasFilters = query || activeTag || activeYear
+  const hasFilters = Boolean(query || activeTag || activeYear)
 
   return (
     <motion.div
@@ -71,31 +174,33 @@ export default function News() {
       className="bg-[#F8FAFC]"
     >
       <Helmet>
-        <title>Insights & News | Salt Essential IT</title>
-        <meta name="description" content="Technology insights, cybersecurity advice, and IT news from the Salt Essential IT team." />
+        <title>Insights &amp; News | Salt Essential IT</title>
+        <meta
+          name="description"
+          content="Technology insights, cybersecurity advice, and IT news from the Salt Essential IT team."
+        />
       </Helmet>
+
       <PageHero
-        title="Insights & News"
+        title="Insights &amp; News"
         bgImage="/Sections/Ai-Banner.jpg"
         align="left"
         tone="light"
       />
 
       <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-        {/* Search + year filter bar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
             <input
               type="search"
-              placeholder="Search articles…"
+              placeholder="Search articles..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full rounded-xl border border-[#E2E8F0] bg-white py-2.5 pl-9 pr-4 text-sm text-[#0F172A] placeholder-[#94A3B8] shadow-sm outline-none transition focus:border-[#0075C4] focus:ring-2 focus:ring-[#0075C4]/20"
             />
           </div>
 
-          {/* Year pills */}
           <div className="flex flex-wrap gap-2">
             {allYears.map((y) => (
               <button
@@ -115,7 +220,6 @@ export default function News() {
           </div>
         </div>
 
-        {/* Tag filter chips */}
         <div className="mt-4">
           <div className="flex flex-wrap gap-2">
             {visibleTags.map((tag) => (
@@ -133,6 +237,7 @@ export default function News() {
                 {tag}
               </button>
             ))}
+
             {allTags.length > 12 && (
               <button
                 onClick={() => setShowAllTags((v) => !v)}
@@ -144,13 +249,15 @@ export default function News() {
           </div>
         </div>
 
-        {/* Results summary + clear */}
         <div className="mt-6 flex items-center justify-between">
           <p className="text-sm text-[#64748B]">
-            {filtered.length === newsArticles.length
-              ? `${newsArticles.length} articles`
-              : `${filtered.length} of ${newsArticles.length} articles`}
+            {loading
+              ? 'Loading articles...'
+              : filtered.length === articles.length
+                ? `${articles.length} articles`
+                : `${filtered.length} of ${articles.length} articles`}
           </p>
+
           {hasFilters && (
             <button
               onClick={clearFilters}
@@ -161,8 +268,7 @@ export default function News() {
           )}
         </div>
 
-        {/* Article grid */}
-        {filtered.length === 0 ? (
+        {!loading && filtered.length === 0 ? (
           <div className="mt-16 text-center">
             <p className="text-lg font-semibold text-[#0F172A]">No articles found</p>
             <p className="mt-1 text-sm text-[#64748B]">Try adjusting your search or filters.</p>
@@ -187,7 +293,6 @@ export default function News() {
                   to={`/news/${article.slug}`}
                   className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0075C4] focus-visible:ring-offset-2"
                 >
-                  {/* Thumbnail */}
                   <div className="relative h-48 overflow-hidden bg-[#EFF6FF]">
                     <img
                       src={article.image}
@@ -204,7 +309,6 @@ export default function News() {
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                   </div>
 
-                  {/* Body */}
                   <div className="flex flex-1 flex-col p-5">
                     <p className="mb-2 text-xs text-[#94A3B8]">{formatDate(article.date)}</p>
                     <h3 className="flex-1 text-sm font-bold leading-snug text-[#0F172A] group-hover:text-[#0064A8] transition-colors line-clamp-2">
@@ -214,7 +318,6 @@ export default function News() {
                       {article.description}
                     </p>
 
-                    {/* Tags */}
                     {article.tags.length > 0 && (
                       <div className="mt-4 flex flex-wrap gap-1.5">
                         {article.tags.slice(0, 3).map((tag) => (

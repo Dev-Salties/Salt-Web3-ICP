@@ -1,53 +1,28 @@
-import { useEffect, useState } from "react";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
-import AccessDeniedPage from "./pages/AccessDeniedPage";
 import { useAuth } from "./context/AuthContext";
-import { isEditor } from "./lib/access"; // or isAdmin
+import saltLogo from "./assets/salt-logo.webp";
 
 export default function App() {
-  const { isAuth, authReady, identity } = useAuth();
-  const [checked, setChecked] = useState(false);
-  const [allowed, setAllowed] = useState(false);
+  const { isAuth, authReady } = useAuth();
 
-  useEffect(() => {
-    let cancelled = false;
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-[#E2E8F0] bg-white p-6 text-center shadow-sm">
+          <img
+            src={saltLogo}
+            alt="Salt Essential IT logo"
+            className="mx-auto h-10 w-auto"
+          />
+          <p className="mt-4 text-sm font-semibold text-[#0F172A]">Connecting to CMSâ€¦</p>
+        </div>
+      </div>
+    );
+  }
 
-    async function run() {
-      if (!identity) return;
-
-      setChecked(false);
-      try {
-        // Timeout wrapper so the UI never hangs forever
-        const ok = await Promise.race([
-          isEditor(identity), // or isAdmin(identity)
-          new Promise<boolean>((_, reject) =>
-            setTimeout(() => reject(new Error("Access check timed out")), 8000)
-          ),
-        ]);
-
-        if (!cancelled) {
-          setAllowed(Boolean(ok));
-          setChecked(true);
-        }
-      } catch (e) {
-        console.error("[access-check] failed:", e);
-        if (!cancelled) {
-          setAllowed(false);
-          setChecked(true); // move forward -> will show AccessDenied
-        }
-      }
-    }
-
-    void run();
-    return () => { cancelled = true; };
-  }, [identity]);
-
-  if (!authReady) return <div className="p-8">Connecting…</div>;
   if (!isAuth) return <LoginPage />;
 
-  if (!checked) return <div className="p-8">Checking access…</div>;
-  if (!allowed) return <AccessDeniedPage />;
-
+  // TEMPORARY: allow any authenticated II user into the CMS UI
   return <HomePage />;
 }

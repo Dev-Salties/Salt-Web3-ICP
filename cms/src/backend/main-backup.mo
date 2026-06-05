@@ -34,19 +34,6 @@ shared actor class SaltCms() {
   let cats       = CatsLib.Store();
   let categories = CatsLib2.Store();
 
-  // TEMPORARY DEV MODE disable backend access enforcement while UI is being built.
-  let DEV_MODE : Bool = true;
-
-  func allowEditor(caller : Principal) : Bool {
-    if (DEV_MODE) return true;
-    access.isEditor(caller)
-  };
-
-  func allowAdmin(caller : Principal) : Bool {
-    if (DEV_MODE) return true;
-    access.isAdmin(caller)
-  };
-
   // ── Upgrade hooks ─────────────────────────────────────────────────────────
 
   system func preupgrade() {
@@ -85,12 +72,12 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func addUser(p : Principal, role : T.Role) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     access.addUser(msg.caller, p, role)
   };
 
   public shared (msg) func removeUser(p : Principal) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     access.removeUser(msg.caller, p)
   };
 
@@ -110,7 +97,7 @@ shared actor class SaltCms() {
   };
 
   public query (msg) func listUsers() : async [T.UserRecord] {
-    if (not allowAdmin(msg.caller)) return [];
+    if (not access.isAdmin(msg.caller)) return [];
     access.listUsers()
   };
 
@@ -135,32 +122,32 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func getAllArticles() : async [T.Article] {
-    if (not allowEditor(msg.caller)) return [];
+    if (not access.isEditor(msg.caller)) return [];
     articles.getAllArticles()
   };
 
   public shared (msg) func createArticle(a : T.Article) : async T.CmsResult {
-    if (not allowEditor(msg.caller)) return #err("Unauthorised");
+    if (not access.isEditor(msg.caller)) return #err("Unauthorised");
     articles.createArticle(a)
   };
 
   public shared (msg) func updateArticle(a : T.Article) : async T.CmsResult {
-    if (not allowEditor(msg.caller)) return #err("Unauthorised");
+    if (not access.isEditor(msg.caller)) return #err("Unauthorised");
     articles.updateArticle(a)
   };
 
   public shared (msg) func publishArticle(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised — only admins can publish");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised — only admins can publish");
     articles.publishArticle(id)
   };
 
   public shared (msg) func unpublishArticle(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     articles.unpublishArticle(id)
   };
 
   public shared (msg) func deleteArticle(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     articles.deleteArticle(id)
   };
 
@@ -177,22 +164,22 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func getAllProducts() : async [T.Product] {
-    if (not allowEditor(msg.caller)) return [];
+    if (not access.isEditor(msg.caller)) return [];
     products.getAllProducts()
   };
 
   public shared (msg) func createProduct(p : T.Product) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     products.createProduct(p)
   };
 
   public shared (msg) func updateProduct(p : T.Product) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     products.updateProduct(p)
   };
 
   public shared (msg) func deleteProduct(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     products.deleteProduct(id)
   };
 
@@ -205,17 +192,17 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func createCategory(c : T.Category) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     categories.createCategory(c)
   };
 
   public shared (msg) func updateCategory(c : T.Category) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     categories.updateCategory(c)
   };
 
   public shared (msg) func deleteCategory(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     categories.deleteCategory(id)
   };
 
@@ -228,22 +215,22 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func getAllVacancies() : async [T.Vacancy] {
-    if (not allowEditor(msg.caller)) return [];
+    if (not access.isEditor(msg.caller)) return [];
     vacancies.getAllVacancies()
   };
 
   public shared (msg) func createVacancy(v : T.Vacancy) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     vacancies.createVacancy(v)
   };
 
   public shared (msg) func updateVacancy(v : T.Vacancy) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     vacancies.updateVacancy(v)
   };
 
   public shared (msg) func deleteVacancy(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     vacancies.deleteVacancy(id)
   };
 
@@ -256,17 +243,17 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func createTeamMember(m : T.TeamMember) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     team.createTeamMember(m)
   };
 
   public shared (msg) func updateTeamMember(m : T.TeamMember) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     team.updateTeamMember(m)
   };
 
   public shared (msg) func deleteTeamMember(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     team.deleteTeamMember(id)
   };
 
@@ -283,38 +270,38 @@ shared actor class SaltCms() {
   };
 
   public shared (msg) func getAllCatSessions() : async [T.CatSession] {
-    if (not allowAdmin(msg.caller)) return [];
+    if (not access.isAdmin(msg.caller)) return [];
     cats.getAllSessions()
   };
 
   /// Upsert by (year, week) key — re-submitting the same pair updates the URL.
   public shared (msg) func upsertCatSession(s : T.CatSession) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     cats.upsertSession(s)
   };
 
   public shared (msg) func createCatSession(s : T.CatSession) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     cats.createSession(s)
   };
 
   public shared (msg) func updateCatSession(s : T.CatSession) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     cats.updateSession(s)
   };
 
   public shared (msg) func archiveCatSession(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     cats.archiveSession(id)
   };
 
   public shared (msg) func unarchiveCatSession(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     cats.unarchiveSession(id)
   };
 
   public shared (msg) func deleteCatSession(id : Text) : async T.CmsResult {
-    if (not allowAdmin(msg.caller)) return #err("Unauthorised");
+    if (not access.isAdmin(msg.caller)) return #err("Unauthorised");
     cats.deleteSession(id)
   };
 

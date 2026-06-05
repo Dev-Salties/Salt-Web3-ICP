@@ -1,0 +1,163 @@
+export const idlFactory = ({ IDL }) => {
+  const Role = IDL.Variant({ 'admin' : IDL.Null, 'editor' : IDL.Null });
+  const CmsResult = IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text });
+  const ArticleStatus = IDL.Variant({
+    'scheduled' : IDL.Null,
+    'published' : IDL.Null,
+    'draft' : IDL.Null,
+  });
+  const Article = IDL.Record({
+    'id' : IDL.Text,
+    'status' : ArticleStatus,
+    'title' : IDL.Text,
+    'metaDesc' : IDL.Text,
+    'body' : IDL.Text,
+    'date' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'slug' : IDL.Text,
+    'tags' : IDL.Vec(IDL.Text),
+    'description' : IDL.Text,
+    'author' : IDL.Text,
+    'updatedAt' : IDL.Int,
+    'imageUrl' : IDL.Text,
+    'ogImage' : IDL.Text,
+    'scheduledAt' : IDL.Opt(IDL.Int),
+  });
+  const CatSession = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'topic' : IDL.Text,
+    'order' : IDL.Nat,
+    'date' : IDL.Text,
+    'week' : IDL.Nat,
+    'year' : IDL.Text,
+    'imageUrl' : IDL.Text,
+    'youtubeUrl' : IDL.Text,
+    'weekLabel' : IDL.Text,
+    'archived' : IDL.Bool,
+  });
+  const Category = IDL.Record({
+    'id' : IDL.Text,
+    'order' : IDL.Nat,
+    'name' : IDL.Text,
+  });
+  const Product = IDL.Record({
+    'id' : IDL.Text,
+    'active' : IDL.Bool,
+    'name' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'description' : IDL.Text,
+    'updatedAt' : IDL.Int,
+    'imageUrl' : IDL.Text,
+    'category' : IDL.Text,
+    'enquiryUrl' : IDL.Text,
+    'price' : IDL.Text,
+  });
+  const TeamMember = IDL.Record({
+    'id' : IDL.Text,
+    'bio' : IDL.Text,
+    'order' : IDL.Nat,
+    'name' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'role' : IDL.Text,
+    'photoUrl' : IDL.Text,
+    'updatedAt' : IDL.Int,
+  });
+  const EmploymentType = IDL.Variant({
+    'internship' : IDL.Null,
+    'contract' : IDL.Null,
+    'partTime' : IDL.Null,
+    'fullTime' : IDL.Null,
+  });
+  const Vacancy = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'active' : IDL.Bool,
+    'applyUrl' : IDL.Text,
+    'description' : IDL.Text,
+    'employmentType' : EmploymentType,
+    'summary' : IDL.Text,
+    'updatedAt' : IDL.Int,
+    'datePosted' : IDL.Int,
+    'closingDate' : IDL.Text,
+    'department' : IDL.Text,
+    'location' : IDL.Text,
+  });
+  const ArticleIndex = IDL.Record({
+    'id' : IDL.Text,
+    'status' : ArticleStatus,
+    'title' : IDL.Text,
+    'date' : IDL.Text,
+    'slug' : IDL.Text,
+    'tags' : IDL.Vec(IDL.Text),
+    'description' : IDL.Text,
+    'imageUrl' : IDL.Text,
+  });
+  const UserRecord = IDL.Record({
+    'principal' : IDL.Principal,
+    'role' : Role,
+    'addedAt' : IDL.Int,
+  });
+  const SaltCms = IDL.Service({
+    'addUser' : IDL.Func([IDL.Principal, Role], [CmsResult], []),
+    'archiveCatSession' : IDL.Func([IDL.Text], [CmsResult], []),
+    'bootstrapAdmin' : IDL.Func([], [CmsResult], []),
+    'createArticle' : IDL.Func([Article], [CmsResult], []),
+    'createCatSession' : IDL.Func([CatSession], [CmsResult], []),
+    'createCategory' : IDL.Func([Category], [CmsResult], []),
+    'createProduct' : IDL.Func([Product], [CmsResult], []),
+    'createTeamMember' : IDL.Func([TeamMember], [CmsResult], []),
+    'createVacancy' : IDL.Func([Vacancy], [CmsResult], []),
+    'deleteArticle' : IDL.Func([IDL.Text], [CmsResult], []),
+    'deleteCatSession' : IDL.Func([IDL.Text], [CmsResult], []),
+    'deleteCategory' : IDL.Func([IDL.Text], [CmsResult], []),
+    'deleteProduct' : IDL.Func([IDL.Text], [CmsResult], []),
+    'deleteTeamMember' : IDL.Func([IDL.Text], [CmsResult], []),
+    'deleteVacancy' : IDL.Func([IDL.Text], [CmsResult], []),
+    'getActiveVacancies' : IDL.Func([], [IDL.Vec(Vacancy)], ['query']),
+    'getAllArticles' : IDL.Func([], [IDL.Vec(Article)], []),
+    'getAllCatSessions' : IDL.Func([], [IDL.Vec(CatSession)], []),
+    'getAllProducts' : IDL.Func([], [IDL.Vec(Product)], []),
+    'getAllVacancies' : IDL.Func([], [IDL.Vec(Vacancy)], []),
+    'getArticle' : IDL.Func([IDL.Text], [IDL.Opt(Article)], ['query']),
+    'getArticleBySlug' : IDL.Func([IDL.Text], [IDL.Opt(Article)], ['query']),
+    'getArticlesByTag' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(ArticleIndex)],
+        ['query'],
+      ),
+    'getCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+    'getCatsLinks' : IDL.Func([], [IDL.Vec(CatSession)], ['query']),
+    'getCatsLinksByYear' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CatSession)],
+        ['query'],
+      ),
+    'getProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+    'getProductsByCategory' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(Product)],
+        ['query'],
+      ),
+    'getPublishedArticles' : IDL.Func([], [IDL.Vec(ArticleIndex)], ['query']),
+    'getTeamMembers' : IDL.Func([], [IDL.Vec(TeamMember)], ['query']),
+    'health' : IDL.Func([], [IDL.Text], ['query']),
+    'is_admin' : IDL.Func([], [IDL.Bool], ['query']),
+    'is_editor' : IDL.Func([], [IDL.Bool], ['query']),
+    'listUsers' : IDL.Func([], [IDL.Vec(UserRecord)], ['query']),
+    'publishArticle' : IDL.Func([IDL.Text], [CmsResult], []),
+    'removeUser' : IDL.Func([IDL.Principal], [CmsResult], []),
+    'unarchiveCatSession' : IDL.Func([IDL.Text], [CmsResult], []),
+    'unpublishArticle' : IDL.Func([IDL.Text], [CmsResult], []),
+    'updateArticle' : IDL.Func([Article], [CmsResult], []),
+    'updateCatSession' : IDL.Func([CatSession], [CmsResult], []),
+    'updateCategory' : IDL.Func([Category], [CmsResult], []),
+    'updateProduct' : IDL.Func([Product], [CmsResult], []),
+    'updateTeamMember' : IDL.Func([TeamMember], [CmsResult], []),
+    'updateVacancy' : IDL.Func([Vacancy], [CmsResult], []),
+    'upsertCatSession' : IDL.Func([CatSession], [CmsResult], []),
+    'whoami' : IDL.Func([], [IDL.Text], ['query']),
+  });
+  return SaltCms;
+};
+export const init = ({ IDL }) => { return []; };

@@ -43,3 +43,12 @@ export async function updateActor(identity: Identity) {
   if (!idlFactory || !CANISTER_ID) return null
   return Actor.createActor(idlFactory, { agent: await makeAgent(identity), canisterId: CANISTER_ID })
 }
+
+export async function devActor() {
+  const idlFactory = await loadIdl();
+  if (!idlFactory || !CANISTER_ID) return null;
+  return Actor.createActor(idlFactory, {
+    agent: await makeAgent(),
+    canisterId: CANISTER_ID,
+  });
+}

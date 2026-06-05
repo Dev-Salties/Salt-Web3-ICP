@@ -1,4 +1,5 @@
 import { useAuth } from "../context/AuthContext";
+import ArticlesPage from "./ArticlesPage";
 
 export default function HomePage() {
   const { principal, logout } = useAuth();
@@ -31,6 +32,10 @@ export default function HomePage() {
         <p className="mt-1 text-sm text-slate-500">
           You are signed in successfully. This is the placeholder dashboard until the full CMS screens are added.
         </p>
+
+        <main className="mx-auto max-w-6xl px-6 py-8">
+          <ArticlesPage />
+        </main>
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="text-sm font-semibold text-slate-900">Your Principal</div>
