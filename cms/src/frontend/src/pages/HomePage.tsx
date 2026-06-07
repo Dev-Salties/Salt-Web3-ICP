@@ -1,19 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from "react";
 import OverviewPage from "./OverviewPage";
 import ArticlesPage from "./ArticlesPage";
 import TeamPage from "./TeamPage";
 import ProductsPage from "./ProductsPage";
-import CmsLayout from "../components/CmsLayout";
-import {
-  Newspaper,
-  Users,
-  ShoppingCart,
-  CheckCircle2,
-  X,
-} from "lucide-react";
-
-type SectionKey = "overview" | "articles" | "team" | "products";
+import CategoriesPage from "./CategoriesPage";
+import CatsPage from "./CatsPage";
+import CmsLayout, { type SectionKey } from "../components/CmsLayout";
+import { CheckCircle2, X } from "lucide-react";
 
 type ToastState = {
   message: string;
@@ -21,7 +14,6 @@ type ToastState = {
 };
 
 export default function HomePage() {
-  const { principal, logout } = useAuth();
   const [activeSection, setActiveSection] = useState<SectionKey>(() => {
     if (typeof window === "undefined") return "overview";
     const saved = localStorage.getItem("cms-active-section");
@@ -29,7 +21,9 @@ export default function HomePage() {
       saved === "overview" ||
       saved === "articles" ||
       saved === "team" ||
-      saved === "products"
+      saved === "products" ||
+      saved === "categories" ||
+      saved === "cats"
     ) {
       return saved;
     }
@@ -40,6 +34,8 @@ export default function HomePage() {
     articles: 0,
     team: 0,
     products: 0,
+    categories: 0,
+    cats: 0,
   });
 
   const [toast, setToast] = useState<ToastState>({
@@ -86,13 +82,11 @@ export default function HomePage() {
           )}
         </div>
 
-        {activeSection === "overview" && (
-          <OverviewPage />
-        )}
+        {activeSection === "overview" && <OverviewPage />}
 
         {activeSection === "articles" && (
           <ArticlesPage
-            onCountChange={(count) =>
+            onCountChange={(count: number) =>
               setCounts((prev) => ({ ...prev, articles: count }))
             }
             onNotify={showToast}
@@ -101,7 +95,7 @@ export default function HomePage() {
 
         {activeSection === "team" && (
           <TeamPage
-            onCountChange={(count) =>
+            onCountChange={(count: number) =>
               setCounts((prev) => ({ ...prev, team: count }))
             }
             onNotify={showToast}
@@ -110,8 +104,26 @@ export default function HomePage() {
 
         {activeSection === "products" && (
           <ProductsPage
-            onCountChange={(count) =>
+            onCountChange={(count: number) =>
               setCounts((prev) => ({ ...prev, products: count }))
+            }
+            onNotify={showToast}
+          />
+        )}
+
+        {activeSection === "categories" && (
+          <CategoriesPage
+            onCountChange={(count: number) =>
+              setCounts((prev) => ({ ...prev, categories: count }))
+            }
+            onNotify={showToast}
+          />
+        )}
+
+        {activeSection === "cats" && (
+          <CatsPage
+            onCountChange={(count: number) =>
+              setCounts((prev) => ({ ...prev, cats: count }))
             }
             onNotify={showToast}
           />
@@ -120,4 +132,3 @@ export default function HomePage() {
     </CmsLayout>
   );
 }
-

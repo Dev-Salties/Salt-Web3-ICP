@@ -1,241 +1,403 @@
-/**
- * CATS Links page â€” manage Cybersecurity Awareness Training Session recordings.
- * Sessions are upserted by (year, week) key. Old years can be archived
- * (hidden from the public website) without losing on-chain history.
- */
-import { useState, useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Archive, ArchiveRestore, Trash2, Pencil } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
-import { updateActor, queryActor } from '../lib/canister'
+import { useEffect, useState } from "react";
+import {
+  getAllCatSessions,
+  createCatSession,
+  updateCatSession,
+  archiveCatSession,
+  unarchiveCatSession,
+  deleteCatSession,
+  type CatSession,
+} from "../lib/cats";
 
-type CatSession = {
-  id: string; year: string; week: number; weekLabel: string
-  title: string; topic: string; date: string
-  imageUrl: string; youtubeUrl: string; archived: boolean; order: number
+type CatsPageProps = {
+  onNotify?: (message: string) => void;
+  onCountChange?: (count: number) => void;
+};
+
+function emptyForm(): CatSession {
+  return {
+    id: "",
+    year: "",
+    week: 0n,
+    weekLabel: "",
+    title: "",
+    topic: "",
+    date: "",
+    imageUrl: "",
+    youtubeUrl: "",
+    archived: false,
+    order: 0n,
+  };
 }
 
-const EMPTY: Omit<CatSession, 'id'> = {
-  year: new Date().getFullYear().toString(), week: 1, weekLabel: 'Week 1',
-  title: '', topic: '', date: '', imageUrl: '', youtubeUrl: '', archived: false, order: 1,
-}
+export default function CatsPage({
+  onNotify,
+  onCountChange,
+}: CatsPageProps) {
+  const [sessions, setSessions] = useState<CatSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState<CatSession>(emptyForm());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
-export default function CatsPage() {
-  const { identity } = useAuth()
-  const qc = useQueryClient()
-  const [editing, setEditing] = useState<CatSession | 'new' | null>(null)
-  const [showArchived, setShowArchived] = useState(false)
+  async function load() {
+    setLoading(true);
+    setError(null);
 
-  const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ['cats-admin'],
-    queryFn: async () => {
-      const actor = await updateActor(identity!)
-      if (!actor) return []
-      return actor.getAllCatSessions() as Promise<CatSession[]>
-    },
-    enabled: Boolean(identity),
-  })
-
-  const archive = useMutation({
-    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
-      const actor = await updateActor(identity!)
-      if (!actor) throw new Error('No actor')
-      return archived ? actor.unarchiveCatSession(id) : actor.archiveCatSession(id)
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cats-admin'] }),
-  })
-
-  const del = useMutation({
-    mutationFn: async (id: string) => {
-      if (!window.confirm('Hard-delete this session? Archive is safer.')) return
-      const actor = await updateActor(identity!)
-      if (!actor) throw new Error('No actor')
-      return actor.deleteCatSession(id)
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cats-admin'] }),
-  })
-
-  const visible = showArchived ? sessions : sessions.filter((s) => !s.archived)
-
-  return (
-    <div className="p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">CATS Links</h1>
-          <p className="mt-1 text-sm text-slate-500">Cybersecurity Awareness Training Session recordings</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowArchived((v) => !v)}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-          >
-            {showArchived ? 'Hide archived' : 'Show archived'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#0064A8] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0075C4]"
-          >
-            <Plus className="h-3.5 w-3.5" /> New session
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr>
-              {['Year', 'Week', 'Title', 'YouTube', 'Status', ''].map((h) => (
-                <th key={h} className="px-4 py-3 text-left">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loadingâ€¦</td></tr>
-            )}
-            {!isLoading && visible.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No sessions yet.</td></tr>
-            )}
-            {visible.map((s) => (
-              <tr key={s.id} className={s.archived ? 'opacity-50' : 'hover:bg-slate-50'}>
-                <td className="px-4 py-3 font-mono text-xs">{s.year}</td>
-                <td className="px-4 py-3">{s.weekLabel}</td>
-                <td className="px-4 py-3 font-medium text-slate-900">{s.title}</td>
-                <td className="max-w-[180px] truncate px-4 py-3 font-mono text-xs text-slate-500">
-                  {s.youtubeUrl || <span className="text-slate-300">â€”</span>}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={[
-                    'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                    s.archived ? 'bg-slate-100 text-slate-500'
-                      : s.youtubeUrl ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-amber-50 text-amber-700',
-                  ].join(' ')}>
-                    {s.archived ? 'Archived' : s.youtubeUrl ? 'Live' : 'No recording'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-2 text-slate-400">
-                    <button title="Edit" onClick={() => setEditing(s)} className="hover:text-[#0064A8]"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button title={s.archived ? 'Restore' : 'Archive'} onClick={() => archive.mutate({ id: s.id, archived: s.archived })} className="hover:text-amber-600">
-                      {s.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                    </button>
-                    <button title="Hard delete" onClick={() => del.mutate(s.id)} className="hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {editing && (
-        <CatModal
-          initial={editing === 'new' ? null : editing}
-          identity={identity!}
-          onClose={() => setEditing(null)}
-          onSaved={() => { qc.invalidateQueries({ queryKey: ['cats-admin'] }); setEditing(null) }}
-        />
-      )}
-    </div>
-  )
-}
-
-function CatModal({ initial, identity, onClose, onSaved }: {
-  initial: CatSession | null
-  identity: NonNullable<ReturnType<typeof useAuth>['identity']>
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const [form, setForm] = useState<Omit<CatSession, 'id'>>({
-    year:       initial?.year       ?? EMPTY.year,
-    week:       initial?.week       ?? EMPTY.week,
-    weekLabel:  initial?.weekLabel  ?? EMPTY.weekLabel,
-    title:      initial?.title      ?? '',
-    topic:      initial?.topic      ?? '',
-    date:       initial?.date       ?? '',
-    imageUrl:   initial?.imageUrl   ?? '',
-    youtubeUrl: initial?.youtubeUrl ?? '',
-    archived:   initial?.archived   ?? false,
-    order:      initial?.order      ?? 1,
-  })
-  const [busy, setBusy]   = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const save = async () => {
-    if (!form.title.trim() || !form.year.trim()) { setError('Year and title are required'); return }
-    setBusy(true); setError(null)
     try {
-      const actor = await updateActor(identity)
-      if (!actor) throw new Error('Canister not configured')
-      const id = initial?.id ?? `${form.year}-week${form.week}`
-      const session = { ...form, id, week: Number(form.week), order: Number(form.order) }
-      const res: unknown = initial
-        ? await actor.updateCatSession(session)
-        : await actor.upsertCatSession(session)
-      if (res && typeof res === 'object' && 'err' in res) throw new Error(String((res as { err: unknown }).err))
-      onSaved()
+      const data = await getAllCatSessions();
+      setSessions(data);
+      onCountChange?.(data.length);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
+      setError(e instanceof Error ? e.message : "Failed to load CATS sessions");
     } finally {
-      setBusy(false)
+      setLoading(false);
     }
   }
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }))
+  useEffect(() => {
+    void load();
+  }, []);
+
+  function resetForm() {
+    setEditingId(null);
+    setForm(emptyForm());
+    setShowForm(false);
+  }
+
+  function handleAddNew() {
+    setEditingId(null);
+    setForm(emptyForm());
+    setShowForm(true);
+  }
+
+  async function handleSubmit() {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const generatedId =
+        form.id && form.id.trim().length > 0
+          ? form.id
+          : `${form.year}-week${form.week.toString()}`;
+
+      const payload: CatSession = {
+        ...form,
+        id: editingId ?? generatedId,
+      };
+
+      const res = editingId
+        ? await updateCatSession(payload)
+        : await createCatSession(payload);
+
+      if ("err" in res && res.err) {
+        setError(res.err);
+      } else {
+        await load();
+        onNotify?.(
+          editingId
+            ? "CATS session updated successfully."
+            : "CATS session created successfully."
+        );
+        resetForm();
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save CATS session");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleEdit(session: CatSession) {
+    setEditingId(session.id);
+    setForm({ ...session });
+    setShowForm(true);
+  }
+
+  async function handleArchiveToggle(session: CatSession) {
+    try {
+      const res = session.archived
+        ? await unarchiveCatSession(session.id)
+        : await archiveCatSession(session.id);
+
+      if ("err" in res && res.err) {
+        setError(res.err);
+      } else {
+        await load();
+        onNotify?.(
+          session.archived
+            ? "CATS session unarchived successfully."
+            : "CATS session archived successfully."
+        );
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Failed to update archive status for CATS session"
+      );
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const ok = window.confirm("Are you sure you want to delete this CATS session?");
+    if (!ok) return;
+
+    try {
+      const res = await deleteCatSession(id);
+
+      if ("err" in res && res.err) {
+        setError(res.err);
+      } else {
+        await load();
+        onNotify?.("CATS session deleted successfully.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete CATS session");
+    }
+  }
+
+  const filteredSessions = sessions.filter((session) => {
+    const q = search.toLowerCase();
+    return (
+      session.title.toLowerCase().includes(q) ||
+      session.topic.toLowerCase().includes(q) ||
+      session.year.toLowerCase().includes(q) ||
+      session.weekLabel.toLowerCase().includes(q) ||
+      session.date.toLowerCase().includes(q) ||
+      session.id.toLowerCase().includes(q)
+    );
+  });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <h2 className="text-lg font-extrabold text-slate-900">{initial ? 'Edit session' : 'New CAT session'}</h2>
-          <button type="button" onClick={onClose} className="text-sm text-slate-400 hover:text-slate-700">Close</button>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">CATS Links</h1>
+          <p className="text-sm text-slate-500">
+            Create and manage CATS sessions and public YouTube links.
+          </p>
         </div>
 
-        {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+        <button
+          type="button"
+          onClick={handleAddNew}
+          className="rounded-lg bg-[#0064A8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0075C4]"
+        >
+          Add Session
+        </button>
+      </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {[
-            { label: 'Year',          key: 'year',      placeholder: '2025' },
-            { label: 'Week number',   key: 'week',      placeholder: '1' },
-            { label: 'Week label',    key: 'weekLabel', placeholder: 'Week 1' },
-            { label: 'Display order', key: 'order',     placeholder: '1' },
-            { label: 'Title',         key: 'title',     placeholder: 'Know Your Enemy', span: true },
-            { label: 'Topic',         key: 'topic',     placeholder: 'Threats and Vulnerabilitiesâ€¦', span: true },
-            { label: 'Date',          key: 'date',      placeholder: '21 Feb 2025' },
-            { label: 'Image URL',     key: 'imageUrl',  placeholder: '/CATs/week1.jpg' },
-            { label: 'YouTube URL',   key: 'youtubeUrl',placeholder: 'https://youtu.be/â€¦', span: true },
-          ].map(({ label, key, placeholder, span }) => (
-            <label key={key} className={`block text-xs font-semibold text-slate-600 ${span ? 'sm:col-span-2' : ''}`}>
-              {label}
+      {error && (
+        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-semibold">
+            {editingId ? "Edit CATS Session" : "Add CATS Session"}
+          </h2>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2"
+              placeholder="Year (e.g. 2025)"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+            />
+
+            <input
+              type="number"
+              className="rounded-lg border border-slate-300 px-3 py-2"
+              placeholder="Week Number"
+              value={form.week.toString()}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  week: BigInt(e.target.value || "0"),
+                })
+              }
+            />
+
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2"
+              placeholder="Week Label (e.g. Week 1)"
+              value={form.weekLabel}
+              onChange={(e) => setForm({ ...form, weekLabel: e.target.value })}
+            />
+
+            <input
+              type="number"
+              className="rounded-lg border border-slate-300 px-3 py-2"
+              placeholder="Display Order"
+              value={form.order.toString()}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  order: BigInt(e.target.value || "0"),
+                })
+              }
+            />
+
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
+              placeholder="Session Title"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
+              placeholder="Topic"
+              value={form.topic}
+              onChange={(e) => setForm({ ...form, topic: e.target.value })}
+            />
+
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2"
+              placeholder="Date (human-readable)"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+            />
+
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2"
+              placeholder="Image URL"
+              value={form.imageUrl}
+              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+            />
+
+            <input
+              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
+              placeholder="YouTube URL"
+              value={form.youtubeUrl}
+              onChange={(e) => setForm({ ...form, youtubeUrl: e.target.value })}
+            />
+
+            <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
-                value={String(form[key as keyof typeof form])}
-                onChange={set(key as keyof typeof form)}
-                placeholder={placeholder}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                type="checkbox"
+                checked={form.archived}
+                onChange={(e) => setForm({ ...form, archived: e.target.checked })}
               />
+              Archived
             </label>
-          ))}
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 sm:col-span-2">
-            <input type="checkbox" checked={form.archived} onChange={(e) => setForm((f) => ({ ...f, archived: e.target.checked }))} />
-            Archived (hidden from website â€” use to retire old years without hard-deleting)
-          </label>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => void handleSubmit()}
+              disabled={saving}
+              className="rounded-lg bg-[#0064A8] px-4 py-2 text-white disabled:opacity-50"
+            >
+              {saving
+                ? "Saving..."
+                : editingId
+                ? "Update Session"
+                : "Add Session"}
+            </button>
+
+            <button
+              onClick={resetForm}
+              className="rounded-lg border border-slate-300 px-4 py-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Existing CATS Sessions</h2>
+
+        <div className="mb-4">
+          <input
+            type="search"
+            placeholder="Search CATS sessions..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
         </div>
 
-        <div className="mt-6 flex gap-2">
-          <button type="button" disabled={busy} onClick={() => void save()}
-            className="rounded-full bg-[#0064A8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0075C4] disabled:opacity-50">
-            {busy ? 'Savingâ€¦' : 'Save'}
-          </button>
-          <button type="button" onClick={onClose}
-            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-            Cancel
-          </button>
-        </div>
+        {loading ? (
+          <div className="text-sm text-slate-500">Loading CATS sessions...</div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="text-sm text-slate-500">No CATS sessions found.</div>
+        ) : (
+          <div className="space-y-4">
+            {filteredSessions.map((session) => (
+              <div
+                key={session.id}
+                className="rounded-lg border border-slate-200 p-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-semibold text-slate-900">
+                      {session.title}
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      {session.year} • {session.weekLabel}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-600">
+                      {session.topic}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-600">
+                      {session.date} • {session.archived ? "Archived" : "Active"}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleEdit(session)}
+                      className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => void handleArchiveToggle(session)}
+                      className="rounded-md border border-amber-300 px-3 py-1 text-sm text-amber-700"
+                    >
+                      {session.archived ? "Unarchive" : "Archive"}
+                    </button>
+
+                    <button
+                      onClick={() => void handleDelete(session.id)}
+                      className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-1 text-xs text-slate-500">
+                  <div>
+                    <span className="font-semibold text-slate-700">Order:</span>{" "}
+                    {session.order.toString()}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-700">Image:</span>{" "}
+                    {session.imageUrl || "—"}
+                  </div>
+                  <div className="break-all">
+                    <span className="font-semibold text-slate-700">YouTube:</span>{" "}
+                    {session.youtubeUrl || "—"}
+                  </div>
+                  <div className="break-all font-mono text-[11px] text-slate-400">
+                    ID: {session.id}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

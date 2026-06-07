@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getCategories, type Category } from "../lib/categories";
 import {
   getAllProducts,
   createProduct,
@@ -32,6 +33,7 @@ export default function ProductsPage({
   onCountChange,
 }: ProductsPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,14 +42,20 @@ export default function ProductsPage({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [search, setSearch] = useState("");
 
+  
   async function load() {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await getAllProducts();
-      setProducts(data);
-      onCountChange?.(data.length);
+      const [productsData, categoriesData] = await Promise.all([
+        getAllProducts(),
+        getCategories(),
+      ]);
+
+      setProducts(productsData);
+      setCategories(categoriesData);
+      onCountChange?.(productsData.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load products");
     } finally {
@@ -79,6 +87,11 @@ export default function ProductsPage({
     setError(null);
 
     try {
+      if (!form.category.trim()) {
+        setError("Please select a category.");
+        return;
+      }
+
       const now = BigInt(Date.now()) * 1_000_000n;
 
       const payload: Product = {
@@ -207,12 +220,18 @@ export default function ProductsPage({
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
             />
 
-            <input
+            <select
               className="rounded-lg border border-slate-300 px-3 py-2"
-              placeholder="Category"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-            />
+            >
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.name}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
 
             <input
               className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"

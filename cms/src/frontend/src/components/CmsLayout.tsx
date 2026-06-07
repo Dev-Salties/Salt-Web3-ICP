@@ -6,11 +6,13 @@ import {
   Users,
   LogOut,
   ChevronRight,
+  ShieldCheck,
+  FolderTree,
   User,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-export type SectionKey = "overview" | "articles" | "team" | "products";
+export type SectionKey = "overview" | "articles" | "team" | "products" | "categories" | "cats";
 
 type CmsLayoutProps = {
   activeSection: SectionKey;
@@ -23,6 +25,8 @@ const NAV = [
   { key: "articles" as SectionKey, label: "Articles", icon: Newspaper },
   { key: "team" as SectionKey, label: "Team", icon: Users },
   { key: "products" as SectionKey, label: "Products", icon: Package },
+  { key: "categories" as SectionKey, label: "Categories", icon: FolderTree },
+  { key: "cats" as SectionKey, label: "CATS Links", icon: ShieldCheck },
 ];
 
 export default function CmsLayout({
@@ -86,10 +90,12 @@ export default function CmsLayout({
         </nav>
 
         <div className="border-t border-[#E2E8F0] px-4 py-4">
-          <p className="truncate text-[10px] font-mono text-[#94A3B8]">
-            <User className="h-4 w-4 text-[#0064A8]" />
-            {principal ? `${principal.slice(0, 10)}...` : ""}
-          </p>
+          <div className="flex items-center gap-2 truncate text-[10px] font-mono text-[#94A3B8]">
+            <User className="h-4 w-4 shrink-0 text-[#0064A8]" />
+            <span className="truncate">
+              {principal ? `${principal.slice(0, 10)}...` : ""}
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => void logout()}
