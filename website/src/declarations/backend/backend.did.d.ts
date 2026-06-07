@@ -116,13 +116,15 @@ export interface SaltCms {
 }
 export interface TeamMember {
   'id' : string,
-  'bio' : string,
+  'motto' : string,
   'order' : bigint,
+  'bestPart' : string,
   'name' : string,
   'createdAt' : bigint,
   'role' : string,
   'photoUrl' : string,
   'updatedAt' : bigint,
+  'whyLove' : string,
 }
 export interface UserRecord {
   'principal' : Principal,

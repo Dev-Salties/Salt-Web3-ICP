@@ -84,13 +84,14 @@ module {
     id        : Text;
     name      : Text;
     role      : Text;
-    bio       : Text;
+    motto     : Text;
+    whyLove   : Text;
+    bestPart  : Text;
     photoUrl  : Text;
     order     : Nat;
     createdAt : Int;
     updatedAt : Int;
   };
-
   // ── CAT Session ───────────────────────────────────────────────────────────
   /// `archived = true` hides the session from the public query without
   /// deleting it — this is the preferred way to retire past years while

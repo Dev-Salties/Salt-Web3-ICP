@@ -55,13 +55,15 @@ export const idlFactory = ({ IDL }) => {
   });
   const TeamMember = IDL.Record({
     'id' : IDL.Text,
-    'bio' : IDL.Text,
+    'motto' : IDL.Text,
     'order' : IDL.Nat,
+    'bestPart' : IDL.Text,
     'name' : IDL.Text,
     'createdAt' : IDL.Int,
     'role' : IDL.Text,
     'photoUrl' : IDL.Text,
     'updatedAt' : IDL.Int,
+    'whyLove' : IDL.Text,
   });
   const EmploymentType = IDL.Variant({
     'internship' : IDL.Null,

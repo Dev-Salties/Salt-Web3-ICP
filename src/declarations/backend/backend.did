@@ -21,14 +21,16 @@ type UserRecord =
  };
 type TeamMember = 
  record {
-   bio: text;
+   bestPart: text;
    createdAt: int;
    id: text;
+   motto: text;
    name: text;
    order: nat;
    photoUrl: text;
    role: text;
    updatedAt: int;
+   whyLove: text;
  };
 type SaltCms = 
  service {

@@ -3,6 +3,7 @@ import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
 import PageHero from '../../components/PageHero'
 import AboutFlow, { AboutFlowFooter } from '../../components/AboutFlow'
 import { Helmet } from 'react-helmet-async'
+import { fetchTeamMembers } from '../../lib/team'
 
 const pageFade = {
   initial: { opacity: 0, y: 20 },
@@ -272,6 +273,27 @@ const team: TeamMember[] = [
   },
 ]
 
+function mergeTeam(dynamicMembers: TeamMember[], staticMembers: TeamMember[]) {
+  const byName = new Map<string, TeamMember>()
+
+  // Dynamic first = priority
+  for (const member of dynamicMembers) {
+    if (member.name) {
+      byName.set(member.name.trim().toLowerCase(), member)
+    }
+  }
+
+  // Static fallback only if not already present
+  for (const member of staticMembers) {
+    const key = member.name?.trim().toLowerCase()
+    if (key && !byName.has(key)) {
+      byName.set(key, member)
+    }
+  }
+
+  return Array.from(byName.values())
+}
+
 export default function AboutTeam() {
   const reduceMotion = useReducedMotion()
   const [activeCard, setActiveCard] = useState<string | null>(null)
@@ -303,6 +325,49 @@ export default function AboutTeam() {
       transition: { type: 'spring' as const, stiffness: 220, damping: 22 },
     },
   }
+
+  const [dynamicTeam, setDynamicTeam] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadTeam() {
+      try {
+        const backendMembers = await fetchTeamMembers()
+
+        const mapped = backendMembers.map((m) => ({
+          name: m.name,
+          role: m.role,
+          image: m.photoUrl,
+          motto: m.motto,
+          whyLove: m.whyLove,
+          bestPart: m.bestPart,
+        }))
+
+        if (!cancelled) {
+          setDynamicTeam(mapped)
+        }
+      } catch (err) {
+        console.warn('[Team] Failed to load backend team members. Using static fallback only.', err)
+        if (!cancelled) {
+          setDynamicTeam([])
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadTeam()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const mergedTeam = mergeTeam(dynamicTeam, team)
 
   return (
     <motion.div
@@ -353,7 +418,7 @@ export default function AboutTeam() {
           </div>
 
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {team.map((member, idx) => {
+            {mergedTeam.map((member, idx) => {
               const hasContent = Boolean(member.motto || member.whyLove || member.bestPart)
               const isActive = activeCard === member.name
 
@@ -407,6 +472,10 @@ export default function AboutTeam() {
                         alt={member.name}
                         loading="lazy"
                         className="h-64 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        onError={(e) => {
+                          ;(e.currentTarget as HTMLImageElement).src =
+                            '/Sections/Salt-blue-header-services.jpg'
+                        }}
                       />
                     </div>
 

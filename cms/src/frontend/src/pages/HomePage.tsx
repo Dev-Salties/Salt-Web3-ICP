@@ -1,61 +1,123 @@
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import OverviewPage from "./OverviewPage";
 import ArticlesPage from "./ArticlesPage";
+import TeamPage from "./TeamPage";
+import ProductsPage from "./ProductsPage";
+import CmsLayout from "../components/CmsLayout";
+import {
+  Newspaper,
+  Users,
+  ShoppingCart,
+  CheckCircle2,
+  X,
+} from "lucide-react";
+
+type SectionKey = "overview" | "articles" | "team" | "products";
+
+type ToastState = {
+  message: string;
+  visible: boolean;
+};
 
 export default function HomePage() {
   const { principal, logout } = useAuth();
+  const [activeSection, setActiveSection] = useState<SectionKey>(() => {
+    if (typeof window === "undefined") return "overview";
+    const saved = localStorage.getItem("cms-active-section");
+    if (
+      saved === "overview" ||
+      saved === "articles" ||
+      saved === "team" ||
+      saved === "products"
+    ) {
+      return saved;
+    }
+    return "overview";
+  });
+
+  const [counts, setCounts] = useState({
+    articles: 0,
+    team: 0,
+    products: 0,
+  });
+
+  const [toast, setToast] = useState<ToastState>({
+    message: "",
+    visible: false,
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cms-active-section", activeSection);
+  }, [activeSection]);
+
+  useEffect(() => {
+    if (!toast.visible) return;
+
+    const timer = setTimeout(() => {
+      setToast({ message: "", visible: false });
+    }, 2600);
+
+    return () => clearTimeout(timer);
+  }, [toast.visible]);
+
+  const showToast = (message: string) => {
+    setToast({ message, visible: true });
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0064A8] text-lg font-black text-white">
-              S
+    <CmsLayout activeSection={activeSection} onSectionChange={setActiveSection}>
+      <div className="min-h-screen bg-[#F8FAFC] p-8">
+        {/* Toast */}
+        <div className="pointer-events-none fixed right-6 top-6 z-50">
+          {toast.visible && (
+            <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <span className="text-sm font-medium text-slate-800">
+                {toast.message}
+              </span>
+              <button
+                onClick={() => setToast({ message: "", visible: false })}
+                className="ml-1 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Salt Essential CMS</div>
-              <div className="text-xs text-slate-500">Admin Console</div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => void logout()}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Logout
-          </button>
+          )}
         </div>
-      </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
-        <h1 className="text-2xl font-extrabold text-slate-900">Home</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          You are signed in successfully. This is the placeholder dashboard until the full CMS screens are added.
-        </p>
+        {activeSection === "overview" && (
+          <OverviewPage />
+        )}
 
-        <main className="mx-auto max-w-6xl px-6 py-8">
-          <ArticlesPage />
-        </main>
+        {activeSection === "articles" && (
+          <ArticlesPage
+            onCountChange={(count) =>
+              setCounts((prev) => ({ ...prev, articles: count }))
+            }
+            onNotify={showToast}
+          />
+        )}
 
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="text-sm font-semibold text-slate-900">Your Principal</div>
-          <div className="mt-2 break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-800">
-            {principal}
-          </div>
+        {activeSection === "team" && (
+          <TeamPage
+            onCountChange={(count) =>
+              setCounts((prev) => ({ ...prev, team: count }))
+            }
+            onNotify={showToast}
+          />
+        )}
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-900">Content</div>
-              <div className="mt-1 text-xs text-slate-500">Articles, categories, team, sessions</div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-900">Status</div>
-              <div className="mt-1 text-xs text-slate-500">Backend connected (next step: show live counts)</div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+        {activeSection === "products" && (
+          <ProductsPage
+            onCountChange={(count) =>
+              setCounts((prev) => ({ ...prev, products: count }))
+            }
+            onNotify={showToast}
+          />
+        )}
+      </div>
+    </CmsLayout>
   );
 }
+
