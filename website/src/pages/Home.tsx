@@ -215,7 +215,7 @@ export default function Home() {
                 animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                 transition={{ duration: 0.42, delay: 0.18 }}
               >
-                25 years of keeping Namibian businesses running. One partner for everything from your network to your Azure cloud.
+                28 years of keeping Namibian businesses running. One partner for everything from your network to your Azure cloud.
               </motion.p>
 
               {/* CTAs */}
