@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import ImageUpload from "../components/ImageUpload";
 import {
   getAllArticles,
   createArticle,
@@ -173,10 +174,7 @@ export default function ArticlesPage({ onNotify, onCountChange }: ArticlesPagePr
               <label className="text-xs font-medium text-slate-600">Slug</label>
               <input className="input" placeholder="url-friendly-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">Image URL</label>
-              <input className="input" placeholder="https://..." value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
-            </div>
+            <ImageUpload label="Image" value={form.imageUrl} onChange={(url) => setForm({ ...form, imageUrl: url })} />
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">Date</label>
               <input className="input" placeholder="YYYY-MM-DD" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -193,10 +191,7 @@ export default function ArticlesPage({ onNotify, onCountChange }: ArticlesPagePr
               <label className="text-xs font-medium text-slate-600">Author</label>
               <input className="input" placeholder="Author name" value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">OG Image URL</label>
-              <input className="input" placeholder="https://..." value={form.ogImage} onChange={(e) => setForm({ ...form, ogImage: e.target.value })} />
-            </div>
+            <ImageUpload label="OG Image" value={form.ogImage} onChange={(url) => setForm({ ...form, ogImage: url })} />
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="text-xs font-medium text-slate-600">Meta Description</label>
               <input className="input" placeholder="SEO meta description" value={form.metaDesc} onChange={(e) => setForm({ ...form, metaDesc: e.target.value })} />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ImageUpload from "../components/ImageUpload";
 import {
   getTeamMembers,
   createTeamMember,
@@ -139,10 +140,7 @@ export default function TeamPage({ onNotify, onCountChange }: TeamPageProps) {
               <label className="text-xs font-medium text-slate-600">Role / Position</label>
               <input className="input" placeholder="e.g. Senior Engineer" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">Photo URL</label>
-              <input className="input" placeholder="https://..." value={form.photoUrl} onChange={(e) => setForm({ ...form, photoUrl: e.target.value })} />
-            </div>
+            <ImageUpload label="Photo" value={form.photoUrl} onChange={(url) => setForm({ ...form, photoUrl: url })} />
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">Display Order</label>
               <input type="number" className="input" placeholder="0" value={form.order.toString()} onChange={(e) => setForm({ ...form, order: BigInt(e.target.value || "0") })} />

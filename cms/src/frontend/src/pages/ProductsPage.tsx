@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ImageUpload from "../components/ImageUpload";
 import { getCategories, type Category } from "../lib/categories";
 import {
   getAllProducts,
@@ -147,10 +148,7 @@ export default function ProductsPage({ onNotify, onCountChange }: ProductsPagePr
               <label className="text-xs font-medium text-slate-600">Price</label>
               <input className="input" placeholder="e.g. N$38.00" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">Image URL</label>
-              <input className="input" placeholder="https://..." value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
-            </div>
+            <ImageUpload label="Product Image" value={form.imageUrl} onChange={(url) => setForm({ ...form, imageUrl: url })} />
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600">Category</label>
               <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
