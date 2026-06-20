@@ -12,6 +12,15 @@ export default {
         // as the first entry once a licensed web font file (WOFF2) is available.
         display: ['Roboto', 'Arial Narrow', 'Arial', 'sans-serif'],
       },
+      colors: {
+        salt: {
+          blue: '#0064A8',
+          'blue-50': '#7199CC',
+          'blue-20': '#B3C7E8',
+          silver: '#8C96AB',
+          black: '#000000',
+        },
+      },
       keyframes: {
         'fade-slide-up': {
           '0%': { opacity: '0', transform: 'translateY(10px)' },

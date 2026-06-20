@@ -28,10 +28,7 @@ type ProductsPageProps = {
   onCountChange?: (count: number) => void;
 };
 
-export default function ProductsPage({
-  onNotify,
-  onCountChange,
-}: ProductsPageProps) {
+export default function ProductsPage({ onNotify, onCountChange }: ProductsPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,17 +39,14 @@ export default function ProductsPage({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  
   async function load() {
     setLoading(true);
     setError(null);
-
     try {
       const [productsData, categoriesData] = await Promise.all([
         getAllProducts(),
         getCategories(),
       ]);
-
       setProducts(productsData);
       setCategories(categoriesData);
       onCountChange?.(productsData.length);
@@ -63,57 +57,30 @@ export default function ProductsPage({
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
 
-  function resetForm() {
-    setEditingId(null);
-    setForm(emptyForm());
-  }
-
-  function openCreateForm() {
-    resetForm();
-    setIsFormOpen(true);
-  }
-
-  function closeForm() {
-    resetForm();
-    setIsFormOpen(false);
-  }
+  function resetForm() { setEditingId(null); setForm(emptyForm()); }
+  function openCreateForm() { resetForm(); setIsFormOpen(true); }
+  function closeForm() { resetForm(); setIsFormOpen(false); }
 
   async function handleSubmit() {
     setSaving(true);
     setError(null);
-
     try {
-      if (!form.category.trim()) {
-        setError("Please select a category.");
-        return;
-      }
-
+      if (!form.category.trim()) { setError("Please select a category."); return; }
       const now = BigInt(Date.now()) * 1_000_000n;
-
       const payload: Product = {
         ...form,
         id: editingId ?? crypto.randomUUID(),
         createdAt: editingId ? form.createdAt : now,
         updatedAt: now,
       };
-
-      const res = editingId
-        ? await updateProduct(payload)
-        : await createProduct(payload);
-
+      const res = editingId ? await updateProduct(payload) : await createProduct(payload);
       if ("err" in res && res.err) {
         setError(res.err);
       } else {
         await load();
-        onNotify?.(
-          editingId
-            ? "Product updated successfully."
-            : "Product added successfully."
-        );
+        onNotify?.(editingId ? "Product updated successfully." : "Product added successfully.");
         closeForm();
       }
     } catch (e) {
@@ -123,19 +90,12 @@ export default function ProductsPage({
     }
   }
 
-  function handleEdit(product: Product) {
-    setEditingId(product.id);
-    setForm({ ...product });
-    setIsFormOpen(true);
-  }
+  function handleEdit(product: Product) { setEditingId(product.id); setForm({ ...product }); setIsFormOpen(true); }
 
   async function handleDelete(id: string) {
-    const ok = window.confirm("Are you sure you want to delete this product?");
-    if (!ok) return;
-
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
       const res = await deleteProduct(id);
-
       if ("err" in res && res.err) {
         setError(res.err);
       } else {
@@ -159,192 +119,101 @@ export default function ProductsPage({
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      {/* Header */}
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-sm text-slate-500">
-            Create and manage products that will appear on the public website.
-          </p>
+          <h1 className="page-title">Products</h1>
+          <p className="page-subtitle">Create and manage products that will appear on the public website.</p>
         </div>
-
-        <button
-          onClick={openCreateForm}
-          className="rounded-lg bg-[#0064A8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0075C4]"
-        >
-          Add Product
-        </button>
+        <button onClick={openCreateForm} className="btn-primary">+ Add Product</button>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-box">{error}</div>}
 
       {/* Form */}
       {isFormOpen && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">
-              {editingId ? "Edit Product" : "Add Product"}
-            </h2>
-
-            <button
-              onClick={closeForm}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-            >
-              Close
-            </button>
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="section-title mb-0">{editingId ? "Edit Product" : "Add Product"}</h2>
+            <button onClick={closeForm} className="btn-secondary btn-sm">Close</button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <input
-              className="rounded-lg border border-slate-300 px-3 py-2"
-              placeholder="Product Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-
-            <input
-              className="rounded-lg border border-slate-300 px-3 py-2"
-              placeholder="Price (e.g. N$38.00)"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-            />
-
-            <input
-              className="rounded-lg border border-slate-300 px-3 py-2"
-              placeholder="Image URL"
-              value={form.imageUrl}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-            />
-
-            <select
-              className="rounded-lg border border-slate-300 px-3 py-2"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            >
-              <option value="">Select category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-
-            <input
-              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
-              placeholder="Enquiry URL (optional)"
-              value={form.enquiryUrl}
-              onChange={(e) => setForm({ ...form, enquiryUrl: e.target.value })}
-            />
-
-            <textarea
-              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2 min-h-[140px]"
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-            />
-
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={form.active}
-                onChange={(e) =>
-                  setForm({ ...form, active: e.target.checked })
-                }
-              />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">Product Name</label>
+              <input className="input" placeholder="e.g. Microsoft 365 Business" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">Price</label>
+              <input className="input" placeholder="e.g. N$38.00" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">Image URL</label>
+              <input className="input" placeholder="https://..." value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">Category</label>
+              <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <option value="">Select category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-xs font-medium text-slate-600">Enquiry URL (optional)</label>
+              <input className="input" placeholder="https://..." value={form.enquiryUrl} onChange={(e) => setForm({ ...form, enquiryUrl: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-xs font-medium text-slate-600">Description</label>
+              <textarea className="input min-h-[140px]" placeholder="Product description..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" className="accent-[#0064A8]" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
               Active
             </label>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => void handleSubmit()}
-              disabled={saving}
-              className="rounded-lg bg-[#0064A8] px-4 py-2 text-white disabled:opacity-50"
-            >
-              {saving
-                ? "Saving..."
-                : editingId
-                ? "Update Product"
-                : "Add Product"}
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => void handleSubmit()} disabled={saving} className="btn-primary">
+              {saving ? "Saving..." : editingId ? "Update Product" : "Add Product"}
             </button>
-
-            <button
-              onClick={closeForm}
-              className="rounded-lg border border-slate-300 px-4 py-2"
-            >
-              Cancel
-            </button>
+            <button onClick={closeForm} className="btn-secondary">Cancel</button>
           </div>
         </div>
       )}
 
       {/* Search */}
-      <div className="mb-4">
-        <input
-          type="search"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <input type="search" placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" />
 
-      {/* Existing products */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">Existing Products</h2>
-
+      {/* List */}
+      <div className="card">
+        <h2 className="section-title">Existing Products</h2>
         {loading ? (
-          <div className="text-sm text-slate-500">Loading products...</div>
+          <p className="text-sm text-slate-500">Loading products...</p>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-sm text-slate-500">No products found.</div>
+          <p className="text-sm text-slate-500">No products found.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="rounded-lg border border-slate-200 p-4"
-              >
+              <div key={product.id} className="list-item">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      {product.name}
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      {product.category}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-600">
-                      {product.price} • {product.active ? "Active" : "Inactive"}
+                  <div className="space-y-1">
+                    <div className="font-semibold text-slate-900">{product.name}</div>
+                    <div className="text-sm text-slate-500">{product.category}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-600">{product.price}</span>
+                      <span className={product.active ? "badge-active" : "badge-inactive"}>
+                        {product.active ? "Active" : "Inactive"}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="rounded-md border border-slate-300 px-3 py-1 text-sm"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => void handleDelete(product.id)}
-                      className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-700"
-                    >
-                      Delete
-                    </button>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handleEdit(product)} className="btn-secondary btn-sm">Edit</button>
+                    <button onClick={() => void handleDelete(product.id)} className="btn-danger btn-sm">Delete</button>
                   </div>
                 </div>
-
-                {product.description && (
-                  <p className="mt-3 text-sm text-slate-600">
-                    {product.description}
-                  </p>
-                )}
+                {product.description && <p className="mt-2 text-sm text-slate-600">{product.description}</p>}
               </div>
             ))}
           </div>

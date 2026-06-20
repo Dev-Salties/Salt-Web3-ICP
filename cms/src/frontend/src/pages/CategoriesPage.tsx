@@ -13,17 +13,10 @@ type CategoriesPageProps = {
 };
 
 function emptyForm(): Category {
-  return {
-    id: "",
-    name: "",
-    order: 0n,
-  };
+  return { id: "", name: "", order: 0n };
 }
 
-export default function CategoriesPage({
-  onNotify,
-  onCountChange,
-}: CategoriesPageProps) {
+export default function CategoriesPage({ onNotify, onCountChange }: CategoriesPageProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,7 +29,6 @@ export default function CategoriesPage({
   async function load() {
     setLoading(true);
     setError(null);
-
     try {
       const data = await getCategories();
       setCategories(data);
@@ -48,45 +40,22 @@ export default function CategoriesPage({
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
 
-  function resetForm() {
-    setEditingId(null);
-    setForm(emptyForm());
-    setShowForm(false);
-  }
-
-  function handleAddNew() {
-    setEditingId(null);
-    setForm(emptyForm());
-    setShowForm(true);
-  }
+  function resetForm() { setEditingId(null); setForm(emptyForm()); setShowForm(false); }
+  function handleAddNew() { setEditingId(null); setForm(emptyForm()); setShowForm(true); }
 
   async function handleSubmit() {
     setSaving(true);
     setError(null);
-
     try {
-      const payload: Category = {
-        ...form,
-        id: editingId ?? crypto.randomUUID(),
-      };
-
-      const res = editingId
-        ? await updateCategory(payload)
-        : await createCategory(payload);
-
+      const payload: Category = { ...form, id: editingId ?? crypto.randomUUID() };
+      const res = editingId ? await updateCategory(payload) : await createCategory(payload);
       if ("err" in res && res.err) {
         setError(res.err);
       } else {
         await load();
-        onNotify?.(
-          editingId
-            ? "Category updated successfully."
-            : "Category created successfully."
-        );
+        onNotify?.(editingId ? "Category updated successfully." : "Category created successfully.");
         resetForm();
       }
     } catch (e) {
@@ -96,19 +65,12 @@ export default function CategoriesPage({
     }
   }
 
-  function handleEdit(category: Category) {
-    setEditingId(category.id);
-    setForm({ ...category });
-    setShowForm(true);
-  }
+  function handleEdit(category: Category) { setEditingId(category.id); setForm({ ...category }); setShowForm(true); }
 
   async function handleDelete(id: string) {
-    const ok = window.confirm("Are you sure you want to delete this category?");
-    if (!ok) return;
-
+    if (!window.confirm("Are you sure you want to delete this category?")) return;
     try {
       const res = await deleteCategory(id);
-
       if ("err" in res && res.err) {
         setError(res.err);
       } else {
@@ -120,144 +82,76 @@ export default function CategoriesPage({
     }
   }
 
-  const filteredCategories = categories.filter((category) => {
+  const filteredCategories = categories.filter((c) => {
     const q = search.toLowerCase();
-    return (
-      category.name.toLowerCase().includes(q) ||
-      category.id.toLowerCase().includes(q) ||
-      category.order.toString().includes(q)
-    );
+    return c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold">Categories</h1>
-          <p className="text-sm text-slate-500">
-            Create and manage product categories used across the CMS.
-          </p>
+          <h1 className="page-title">Categories</h1>
+          <p className="page-subtitle">Create and manage product categories used across the CMS.</p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleAddNew}
-          className="rounded-lg bg-[#0064A8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0075C4]"
-        >
-          Add Category
-        </button>
+        <button onClick={handleAddNew} className="btn-primary">+ Add Category</button>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-box">{error}</div>}
 
+      {/* Form */}
       {showForm && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold">
-            {editingId ? "Edit Category" : "Add Category"}
-          </h2>
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="section-title mb-0">{editingId ? "Edit Category" : "Add Category"}</h2>
+            <button onClick={resetForm} className="btn-secondary btn-sm">Close</button>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <input
-              className="rounded-lg border border-slate-300 px-3 py-2"
-              placeholder="Category Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-
-            <input
-              type="number"
-              className="rounded-lg border border-slate-300 px-3 py-2"
-              placeholder="Display Order"
-              value={form.order.toString()}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  order: BigInt(e.target.value || "0"),
-                })
-              }
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">Category Name</label>
+              <input className="input" placeholder="e.g. Networking" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">Display Order</label>
+              <input type="number" className="input" placeholder="0" value={form.order.toString()} onChange={(e) => setForm({ ...form, order: BigInt(e.target.value || "0") })} />
+            </div>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => void handleSubmit()}
-              disabled={saving}
-              className="rounded-lg bg-[#0064A8] px-4 py-2 text-white disabled:opacity-50"
-            >
-              {saving
-                ? "Saving..."
-                : editingId
-                ? "Update Category"
-                : "Add Category"}
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => void handleSubmit()} disabled={saving} className="btn-primary">
+              {saving ? "Saving..." : editingId ? "Update Category" : "Add Category"}
             </button>
-
-            <button
-              onClick={resetForm}
-              className="rounded-lg border border-slate-300 px-4 py-2"
-            >
-              Cancel
-            </button>
+            <button onClick={resetForm} className="btn-secondary">Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Existing Categories</h2>
+      {/* Search + List */}
+      <div className="card">
+        <h2 className="section-title">Existing Categories</h2>
 
-        <div className="mb-4">
-          <input
-            type="search"
-            placeholder="Search categories..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-        </div>
+        <input type="search" placeholder="Search categories..." value={search} onChange={(e) => setSearch(e.target.value)} className="input mb-4" />
 
         {loading ? (
-          <div className="text-sm text-slate-500">Loading categories...</div>
+          <p className="text-sm text-slate-500">Loading categories...</p>
         ) : filteredCategories.length === 0 ? (
-          <div className="text-sm text-slate-500">No categories found.</div>
+          <p className="text-sm text-slate-500">No categories found.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredCategories.map((category) => (
-              <div
-                key={category.id}
-                className="rounded-lg border border-slate-200 p-4"
-              >
+              <div key={category.id} className="list-item">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      {category.name}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-600">
-                      Order: {category.order.toString()}
-                    </div>
+                  <div className="space-y-1">
+                    <div className="font-semibold text-slate-900">{category.name}</div>
+                    <div className="text-xs text-slate-400">Order: {category.order.toString()}</div>
+                    <div className="text-xs text-slate-300 font-mono break-all">ID: {category.id}</div>
                   </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(category)}
-                      className="rounded-md border border-slate-300 px-3 py-1 text-sm"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => void handleDelete(category.id)}
-                      className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-700"
-                    >
-                      Delete
-                    </button>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handleEdit(category)} className="btn-secondary btn-sm">Edit</button>
+                    <button onClick={() => void handleDelete(category.id)} className="btn-danger btn-sm">Delete</button>
                   </div>
-                </div>
-
-                <div className="mt-3 text-xs text-slate-400 font-mono break-all">
-                  ID: {category.id}
                 </div>
               </div>
             ))}
